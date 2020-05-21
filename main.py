@@ -2,14 +2,14 @@
 from db_controller import neo
 neo.GraphDatabase()
 
-driver = GraphDatabase.driver("bolt://localhost:7687", 
+driver = neo.GraphDatabase.driver("bolt://localhost:7687", 
         auth=("neo4j", "test"), encrypted=False)
 
 with driver.session() as session:
-    session.write_transaction(add_friend, "Arthur", "Guinevere")
-    session.write_transaction(add_friend, "Arthur", "Lancelot")
-    session.write_transaction(add_friend, "Arthur", "Merlin")
-    session.read_transaction(print_friends, "Arthur")
+    session.write_transaction(neo.add_friend, "Arthur", "Guinevere")
+    session.write_transaction(neo.add_friend, "Arthur", "Lancelot")
+    session.write_transaction(neo.add_friend, "Arthur", "Merlin")
+    session.read_transaction(neo.print_friends, "Arthur")
 
 driver.close()
 
