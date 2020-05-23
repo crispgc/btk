@@ -1,37 +1,39 @@
+import sys, os
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from external_data.ncbi import UCSC
 
 class RefSeq(UCSC):
+
+    returned_nm = set()
+    
     def query_full_refseq(self, remove_utr=True):
-        # chroms = ['chr' + str(i) for i in range(1, 23)] + ['chrX', 'chrY']
 
-        query = "select * from refGene"
-
+        query = "SELECT * FROM refGene"
         data = self.execute_query(query)
-
-        if remove_utr is True:
-            data, nm_recovered = self._remove_utrs(data)
-
+        data = self._remove_utrs(data) if remove_utr is True else data
         return data
 
     def query_gene(self, gene, remove_utr=True):
-        query = f"SELECT * FROM refGene" +\
-                f" WHERE name2 = '{gene}'"
+        query = f"SELECT * FROM refGene WHERE name2 = '{gene}'"
         data = self.execute_query(query)
-        if remove_utr is True:
-            data, nm_recovered = self._remove_utrs(data)
-
+        data = self._remove_utrs(data) if remove_utr is True else data
         return data
 
-    @staticmethod
-    def _remove_utrs(data):
+    def query_transcript(self, transcript, remove_utr=True):
+        query = f"SELECT * FROM refGene WHERE name = '{transcript}'"
+        data = self.execute_query(query)
+        data = self._remove_utrs(data) if remove_utr is True else data
+        return data
+
+    def _remove_utrs(self, data):
 
         regions = []
-        nm_list = []
-        c = 0
+        nm_set = set()
 
         for line in data:
 
-            nm_list.append(line[1])
+            nm_set.add(line[1])
             exon_idx = -1
 
             # Get the start and end of the exons in two lists
@@ -47,71 +49,51 @@ class RefSeq(UCSC):
             if strand == '-':
                 exon_names = list(reversed(exon_names))
 
-                # print(line)
-                # print(exon_names)
-                # c += 1
-                #
-                # if c == 10:
-                #     exit(1)
-
             if cds_start == cds_end:
-                cds_start = int(line[4])
-                cds_end = int(line[5])
+                cds_start, cds_end = int(line[4]), int(line[5])
 
             for start, end in zip(exons_start, exons_end):
                 exon_idx += 1
 
-                start = int(start)
-                end = int(end)
+                start, end = int(start), int(end)
                 region = list(line)
                 exon_id = exon_names[exon_idx]
-
-                region[2] = region[2].strip("chr")
-                genename = str(region[12])
-                transcript_name = str(region[1])
+                chromosome = region[2].strip("chr")
+                genename, transcript_name = str(region[12]), str(region[1])
+                found = False
 
                 # Regions that are 5UTR or 3UTR
                 if start < cds_start and end < cds_start:
-                    continue
-                if start > cds_end and end > cds_end:
-                    continue
+                    found = True
+                if found is False and start > cds_end and end > cds_end:
+                    found = True
 
                 # Regions of just one gene
-                if start <= cds_start and end >= cds_end:
-                    region[9] = cds_start
-                    region[10] = cds_end
-                    regions.append([str(region[2]), str(region[9]), str(region[10]),
-                                    genename, transcript_name, str(exon_id)])
-                    continue
+                if found is False and start <= cds_start and end >= cds_end:
+                    found = True
+                    region[9], region[10] = cds_start, cds_end
 
                 # Cutting in 5'
-                if start <= cds_start <= end:
-                    region[9] = cds_start
-                    region[10] = end
-                    regions.append([str(region[2]), str(region[9]), str(region[10]),
-                                    genename, transcript_name, str(exon_id)])
-                    continue
+                if found is False and start <= cds_start <= end:
+                    found = True
+                    region[9], region[10] = cds_start, end
 
                 # Cutting in 3'
-                if start <= cds_end <= end:
-                    region[9] = start
-                    region[10] = cds_end
-                    regions.append([str(region[2]), str(region[9]), str(region[10]),
-                                    genename, transcript_name, str(exon_id)])
-                    continue
+                if found is False and start <= cds_end <= end:
+                    found = True
+                    region[9], region[10] = start, cds_end
 
                 # Normal Exon
-                if start >= cds_start and end <= cds_end:
-                    region[9] = start
-                    region[10] = end
-                    regions.append([str(region[2]), str(region[9]), str(region[10]),
-                                    genename, transcript_name, str(exon_id)])
-                    continue
+                if found is False and start >= cds_start and end <= cds_end:
+                    found = True
+                    region[9], region[10] = start, end
 
-            # c += 1
+                regions.append([chromosome, str(region[9]), str(region[10]),
+                                genename, transcript_name, str(exon_id)])
 
-        print("#[LOG]: Extracted " + str(c) + " NMs")
-        return regions, nm_list
+        print(f"#[LOG]: Extracted {len(nm_set)} NMs")
+        self.returned_nm = nm_set
+        return regions
 
 
 def main():
@@ -120,10 +102,8 @@ def main():
 
     outfh = open("./full_refseq.bed", 'w')
     for d in data:
-        # d[3] = '_'.join([d[3], d[4], d[5]])
         outfh.write("\t".join(d) + '\n')
     outfh.close()
-
 
 if __name__ == "__main__":
     main()
