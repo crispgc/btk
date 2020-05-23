@@ -1,0 +1,7 @@
+
+coverage run --source . -m pytest
+coverage report -m
+coverage html
+
+# Para VS Code
+pytest --cov-report xml:cov.xml --cov
