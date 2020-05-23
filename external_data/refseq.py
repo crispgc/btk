@@ -64,9 +64,9 @@ class RefSeq(UCSC):
 
                 # Regions that are 5UTR or 3UTR
                 if start < cds_start and end < cds_start:
-                    found = True
+                    continue
                 if found is False and start > cds_end and end > cds_end:
-                    found = True
+                    continue
 
                 # Regions of just one gene
                 if found is False and start <= cds_start and end >= cds_end:
