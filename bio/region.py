@@ -5,13 +5,17 @@ class Region:
     end = None
 
     def __init__(self, chromosome: str, start: int, end: int):
-        pass
+
+        self.check_region(chromosome, start, end)
+        self.chromosome = chromosome
+        self.start = start
+        self.end = end
 
     def check_region(self, chromosome: str, start: int, end: int):
         """Evaluate region"""
-        chrom_list = [f"x" for x in range(1, 23)] + ['X', 'Y', 'MT']
+        chrom_list = [f"{x}" for x in range(1, 23)] + ['X', 'Y', 'MT']
         if chromosome not in chrom_list:
-            raise Exception("Bad chromosome")
+            raise ValueError("Bad chromosome")
         pass
 
     def change_region(self):

@@ -11,7 +11,10 @@ class Variant:
         self.alt = alt
 
     def __repr__(self):
-        pass
+        return f"{self.chromosome}:{self.start}-{self.ref}>{self.alt}"
+
+    def __str__(self):
+        return f"{self.chromosome}:{self.start}-{self.ref}>{self.alt}"
 
     def _check_position(self):
         pass
